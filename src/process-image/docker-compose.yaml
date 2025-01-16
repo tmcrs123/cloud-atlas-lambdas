@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    hostname: localstack
+    ports:
+      - "4566:4566"
+      - 4510-4559:4510-4559
+    environment:
+      SERVICES: s3
+      DEBUG: 1
+      DATA_DIR: ${DATA_DIR-}
+      DOCKER_HOST: unix:///var/run/docker.sock
+      LOCALSTACK_HOST: localstack
+      LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT: 30
+    volumes:
+      - ${TMPDIR:-/tmp}/localstack:/var/log/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
