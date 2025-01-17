@@ -1,28 +1,25 @@
 {
-  "name": "process-image",
+  "name": "message-handler",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "local": "tsx --env-file=.env runner.ts",
-    "zip": "npx bestzip simple.zip index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "description": "",
+  "dependencies": {
+    "@aws-sdk/client-lambda": "^3.730.0",
+    "@aws-sdk/client-s3": "^3.730.0",
+    "@aws-sdk/client-sqs": "^3.730.0"
+  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.147",
     "@types/node": "^22.10.7",
-    "@types/sharp": "^0.31.1",
     "tslib": "^2.8.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.729.0",
-    "@aws-sdk/client-sqs": "^3.726.1",
-    "sharp": "^0.33.5"
   }
 }

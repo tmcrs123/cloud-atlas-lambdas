@@ -1,0 +1,12 @@
+{
+    "Type": "Notification",
+    "MessageId": "abcd1234-5678-90ab-cdef-EXAMPLE11111",
+    "TopicArn": "arn:aws:sns:us-east-1:123456789012:my-topic",
+    "Message": "{\"event\":\"order_created\",\"orderId\":\"12345\"}",
+    "Timestamp": "2024-01-17T12:34:56.789Z",
+    "SignatureVersion": "1",
+    "Signature": "EXAMPLE_SIGNATURE",
+    "SigningCertURL": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService.pem",
+    "UnsubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=...",
+    "MessageAttributes": {}
+}

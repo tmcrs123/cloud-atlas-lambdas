@@ -1,0 +1,22 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug runner.ts",
+      "type": "pwa-node",
+      "request": "launch",
+      "env": {
+        "ENVIRONMENT": "local",
+        "S3_DUMP_BUCKET": "snappin-dump",
+        "S3_OPTIMIZED_BUCKET": "snappin-optimized",
+        "REGION": "us-east-1",
+        "ENDPOINT": "http://localhost:4566"
+      },
+      "runtimeArgs": ["-r", "tsx"],
+      "args": ["${workspaceFolder}/runner.ts"]
+    }
+  ]
+}

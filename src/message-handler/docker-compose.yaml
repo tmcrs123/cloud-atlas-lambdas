@@ -15,4 +15,4 @@ services:
     volumes:
       - ${TMPDIR:-/tmp}/localstack:/var/log/localstack
       - /var/run/docker.sock:/var/run/docker.sock
-      - ".scripts/localstack-init:/etc/localstack/init/ready.d"
+      - "./scripts/localstack-init:/etc/localstack/init/ready.d"

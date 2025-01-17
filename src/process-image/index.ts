@@ -1,22 +1,17 @@
 import {
-  GetObjectAclCommandOutput,
+  DeleteObjectCommand,
   GetObjectCommand,
   GetObjectCommandOutput,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Context, Handler } from "aws-lambda";
-import { Stream } from "node:stream";
 import sharp from "sharp";
-
-const streamToString = (stream: Stream) => {
-  return new Promise((resolve, reject) => {
-    const chunks: any = [];
-    stream.on("data", (chunk) => chunks.push(chunk));
-    stream.on("error", reject);
-    stream.on("end", () => resolve(Buffer.concat(chunks)));
-  });
-};
+import {
+  SQSClient,
+  SendMessageCommand,
+  SendMessageCommandInput,
+} from "@aws-sdk/client-sqs";
 
 type ImageType = "panorama" | "landscape" | "portrait" | "square";
 
@@ -25,20 +20,32 @@ const DESKTOP_PANORAMA_MAX_WIDTH = 2500;
 const DESKTOP_MAX_HEIGHT = 1200;
 const DESKTOP_MAX_SQUARE = 900;
 
+const queueUrl =
+  "http://sqs.us-east-1.localstack:4566/000000000000/snappin-queue";
+
+const sqsClient = new SQSClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: "test", // Dummy for LocalStack
+    secretAccessKey: "test", // Dummy for LocalStack
+  },
+  endpoint: "http://localhost:4566", // LocalStack SQS endpoint
+});
+
+const s3Client = new S3Client({
+  region: process.env.REGION,
+  endpoint: process.env.ENDPOINT,
+  forcePathStyle: true,
+  // disableHostPrefix: true,
+  // bucketEndpoint: false,
+  // credentials: {
+  //   accessKeyId: "whaerber",
+  //   secretAccessKey: "wegawegaw",
+  // },
+});
+
 export const handler: Handler = async (event, context: Context) => {
   console.log("Starting image processing with event...", JSON.stringify(event));
-
-  const s3Client = new S3Client({
-    region: process.env.REGION,
-    endpoint: process.env.ENDPOINT,
-    forcePathStyle: true,
-    // disableHostPrefix: true,
-    // bucketEndpoint: false,
-    // credentials: {
-    //   accessKeyId: "whaerber",
-    //   secretAccessKey: "wegawegaw",
-    // },
-  });
 
   let getObjectResponse: GetObjectCommandOutput;
   try {
@@ -140,8 +147,28 @@ export const handler: Handler = async (event, context: Context) => {
   const saveProcessedImageCommand = new PutObjectCommand(
     saveProcessedImageInput
   );
+
   await s3Client.send(saveProcessedImageCommand);
   console.log("Saved processed image...");
+
+  const deleteImageFromDumpBucket = new DeleteObjectCommand({
+    Bucket: process.env.S3_DUMP_BUCKET,
+    Key: event.Key,
+  });
+
+  await s3Client.send(deleteImageFromDumpBucket);
+
+  const params: SendMessageCommandInput = {
+    QueueUrl: queueUrl,
+    MessageBody: JSON.stringify({
+      Key: event.Key,
+      mapId: event.mapId,
+      markerId: event.markerId,
+      imageId: event.imageId,
+    }),
+  };
+
+  await sqsClient.send(new SendMessageCommand(params));
 
   return {
     Key: event.Key,
