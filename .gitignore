@@ -1,2 +1,8 @@
 src/process-image/node_modules
 src/process-image/test_image*
+src/process-image/dist
+src/process-image/*.zip
+
+src/message-handler/node_modules
+src/message-handler/dist
+src/message-handler/*.zip
