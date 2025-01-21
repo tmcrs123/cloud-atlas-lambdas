@@ -33,16 +33,13 @@ export const handler: Handler = async (
   const { key, mapId, markerId, imageId } = event;
 
   let getObjectResponse: GetObjectCommandOutput;
-  try {
-    getObjectResponse = await s3Client.send(
-      new GetObjectCommand({
-        Bucket: process.env.S3_DUMP_BUCKET,
-        Key: key,
-      })
-    );
-  } catch (error) {
-    throw new Error(`Image ${key} does not exist`);
-  }
+
+  getObjectResponse = await s3Client.send(
+    new GetObjectCommand({
+      Bucket: process.env.DUMP_BUCKET_NAME,
+      Key: key,
+    })
+  );
 
   console.log("Retrieved image to process: ", key);
 
@@ -127,7 +124,7 @@ export const handler: Handler = async (
   const newKey = `${mapId}/${markerId}/${randomUUID()}`;
   const saveProcessedImageInput = {
     Body: processedImage,
-    Bucket: process.env.S3_OPTIMIZED_BUCKET,
+    Bucket: process.env.OPTIMIZED_BUCKET_NAME,
     Key: newKey,
   };
   const saveProcessedImageCommand = new PutObjectCommand(
@@ -138,7 +135,7 @@ export const handler: Handler = async (
   console.log("Saved processed image...");
 
   const deleteImageFromDumpBucket = new DeleteObjectCommand({
-    Bucket: process.env.S3_DUMP_BUCKET,
+    Bucket: process.env.DUMP_BUCKET_NAME,
     Key: key,
   });
 
