@@ -1,90 +1,109 @@
-import { Context, Handler, SNSEvent } from "aws-lambda";
-import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
-type BucketActions =
-  | "ADD_DUMP"
-  | "REMOVE_DUMP"
-  | "ADD_OPTIMIZED"
-  | "REMOVE_OPTIMIZED";
-type BucketActionMessage = {
-  action: BucketActions;
-  mapId: string;
-  markerId: string;
-  imageId: string;
-};
+enum S3Actions {
+  ObjectCreated = "ObjectCreated:Put",
+  ObjectDeleted = "ObjectRemoved:Delete",
+}
 
-const queueUrl =
-  "http://sqs.us-east-1.localstack:4566/000000000000/snappin-queue";
+const queueUrl = process.env.QUEUE_URL;
 
 const sqsClient = new SQSClient({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: "test",
-    secretAccessKey: "test",
-  },
-  endpoint: "http://localhost:4566",
+  region: process.env.REGION,
+  ...(process.env.NODE_ENV === "local" && {
+    endpoint: process.env.LOCAL_ENDPOINT,
+  }),
 });
 
 const lambdaClient = new LambdaClient({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: "test",
-    secretAccessKey: "test",
-  },
-  endpoint: "http://localhost:4566",
+  region: process.env.REGION,
+  ...(process.env.NODE_ENV === "local" && {
+    endpoint: process.env.LOCAL_ENDPOINT,
+  }),
 });
 
 const s3Client = new S3Client({
-  region: "us-east-1",
-  endpoint: "http://localhost:4566",
+  region: process.env.REGION,
   forcePathStyle: true,
+  ...(process.env.NODE_ENV === "local" && {
+    endpoint: process.env.LOCAL_ENDPOINT,
+  }),
 });
 
-export const handler: Handler = async (event: SNSEvent, context: Context) => {
-  const message: BucketActionMessage = JSON.parse(event.Records[0].Sns.Message);
+type snsS3Message = {
+  awsRegion: string;
+  eventName: string;
+  s3: {
+    bucket: { name: string };
+    object: { key: string };
+  };
+};
 
-  switch (message.action) {
-    case "ADD_DUMP":
-      //invoke process image
-      const invokeCommand = new InvokeCommand({
-        FunctionName: "snappin-process-image",
-        InvocationType: "Event",
-        Payload: Buffer.from(JSON.stringify(message)),
-      });
-      lambdaClient.send(invokeCommand);
-      break;
-    case "REMOVE_DUMP":
-      // do nothing
-      break;
-    case "ADD_OPTIMIZED":
-      const sendMessageCommand = new SendMessageCommand({
-        QueueUrl: queueUrl,
-        MessageBody: JSON.stringify({
-          mapId: message.mapId,
-          markerId: message.markerId,
-          imageId: message.imageId,
-        }),
-      });
-      sqsClient.send(sendMessageCommand);
-      //push to SQS
-      break;
-    case "REMOVE_OPTIMIZED":
-      // remove from s3
-      const deleteImageFromDumpBucket = new DeleteObjectCommand({
-        Bucket: "snappin-dump",
-        Key: `${message.mapId}/${message.markerId}/${message.imageId}`,
-      });
+export const handler = async (event: any, context: any) => {
+  console.log(event);
+  console.log(context);
+  const message: snsS3Message = JSON.parse(event.Records[0].Sns.Message)
+    .Records[0];
 
-      s3Client.send(deleteImageFromDumpBucket);
-      break;
+  const key = message.s3.object.key;
+  const [mapId, markerId, imageId] = message.s3.object.key.split("/");
+
+  if (message.s3.bucket.name === process.env.DUMP_BUCKET_NAME) {
+    console.log("in dump bucket land");
+    switch (message.eventName) {
+      case S3Actions.ObjectCreated:
+        console.log("obj created");
+        const invokeCommand = new InvokeCommand({
+          FunctionName: process.env.PROCESS_IMAGE_FN_NAME,
+          InvocationType: "Event",
+          Payload: Buffer.from(
+            JSON.stringify({ key, mapId, markerId, imageId })
+          ),
+        });
+        await lambdaClient.send(invokeCommand);
+        break;
+      case S3Actions.ObjectDeleted:
+        console.log("obj created");
+
+        break;
+      default:
+        break;
+    }
+  } else {
+    console.log("optimized bucker");
+    switch (message.eventName) {
+      // optimized bucket
+      case S3Actions.ObjectCreated:
+        console.log("obj created");
+        const sendMessageCommand = new SendMessageCommand({
+          QueueUrl: queueUrl,
+          MessageBody: JSON.stringify({
+            key,
+            mapId,
+            markerId,
+            imageId,
+          }),
+        });
+        await sqsClient.send(sendMessageCommand);
+        break;
+      case S3Actions.ObjectDeleted:
+        console.log("obj deleted");
+
+        const deleteImageFromDumpBucket = new DeleteObjectCommand({
+          Bucket: process.env.DUMP_BUCKET_NAME,
+          Key: key,
+        });
+
+        s3Client.send(deleteImageFromDumpBucket);
+        break;
+    }
   }
 
   return {
     statusCode: 200,
     body: JSON.stringify({
-      message: `Successfully handled action ${message.action} for mapId ${message.mapId}, markerId ${message.markerId}, imageId: ${message.imageId}`,
+      message: `Successfully handled action ${message.eventName}-${message.s3.bucket.name} for mapId ${mapId}, markerId ${markerId}, imageId: ${imageId}`,
     }),
   };
 };
