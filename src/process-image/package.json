@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "local": "tsx --env-file=.env runner.ts",
-    "zip": "npx bestzip simple.zip index.js"
+    "zip": "tsc && cp dist/index.js . && npx bestzip process-image.zip index.js node_modules && rm -rf index.js",
+    "upload-s3": "aws s3 cp process-image.zip s3://snappin-test-lambdas/",
+    "local": "tsx --env-file=.env runner.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.729.0",
-    "@aws-sdk/client-sqs": "^3.726.1",
     "sharp": "^0.33.5"
   }
 }

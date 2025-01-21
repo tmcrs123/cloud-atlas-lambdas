@@ -6,12 +6,8 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Context, Handler } from "aws-lambda";
+import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import {
-  SQSClient,
-  SendMessageCommand,
-  SendMessageCommandInput,
-} from "@aws-sdk/client-sqs";
 
 type ImageType = "panorama" | "landscape" | "portrait" | "square";
 
@@ -20,46 +16,35 @@ const DESKTOP_PANORAMA_MAX_WIDTH = 2500;
 const DESKTOP_MAX_HEIGHT = 1200;
 const DESKTOP_MAX_SQUARE = 900;
 
-const queueUrl =
-  "http://sqs.us-east-1.localstack:4566/000000000000/snappin-queue";
-
-const sqsClient = new SQSClient({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: "test", // Dummy for LocalStack
-    secretAccessKey: "test", // Dummy for LocalStack
-  },
-  endpoint: "http://localhost:4566", // LocalStack SQS endpoint
-});
-
 const s3Client = new S3Client({
   region: process.env.REGION,
-  endpoint: process.env.ENDPOINT,
   forcePathStyle: true,
-  // disableHostPrefix: true,
-  // bucketEndpoint: false,
-  // credentials: {
-  //   accessKeyId: "whaerber",
-  //   secretAccessKey: "wegawegaw",
-  // },
+  ...(process.env.NODE_ENV === "local" && {
+    endpoint: process.env.LOCAL_ENDPOINT,
+  }),
 });
 
-export const handler: Handler = async (event, context: Context) => {
+export const handler: Handler = async (
+  event: { key: string; mapId: string; markerId: string; imageId: string },
+  context: Context
+) => {
   console.log("Starting image processing with event...", JSON.stringify(event));
+
+  const { key, mapId, markerId, imageId } = event;
 
   let getObjectResponse: GetObjectCommandOutput;
   try {
     getObjectResponse = await s3Client.send(
       new GetObjectCommand({
         Bucket: process.env.S3_DUMP_BUCKET,
-        Key: event.Key,
+        Key: key,
       })
     );
   } catch (error) {
-    throw new Error(`Image ${event.Key} does not exist`);
+    throw new Error(`Image ${key} does not exist`);
   }
 
-  console.log("Retrieved image to process: ", event.Key);
+  console.log("Retrieved image to process: ", key);
 
   // SHARP PROCESSING
 
@@ -139,10 +124,11 @@ export const handler: Handler = async (event, context: Context) => {
     .toBuffer();
 
   // SAVE TO OPTIMIZED BUCKET
+  const newKey = `${mapId}/${markerId}/${randomUUID()}`;
   const saveProcessedImageInput = {
     Body: processedImage,
     Bucket: process.env.S3_OPTIMIZED_BUCKET,
-    Key: event.Key,
+    Key: newKey,
   };
   const saveProcessedImageCommand = new PutObjectCommand(
     saveProcessedImageInput
@@ -153,27 +139,13 @@ export const handler: Handler = async (event, context: Context) => {
 
   const deleteImageFromDumpBucket = new DeleteObjectCommand({
     Bucket: process.env.S3_DUMP_BUCKET,
-    Key: event.Key,
+    Key: key,
   });
 
   await s3Client.send(deleteImageFromDumpBucket);
 
-  const params: SendMessageCommandInput = {
-    QueueUrl: queueUrl,
-    MessageBody: JSON.stringify({
-      Key: event.Key,
-      mapId: event.mapId,
-      markerId: event.markerId,
-      imageId: event.imageId,
-    }),
-  };
-
-  await sqsClient.send(new SendMessageCommand(params));
-
   return {
-    Key: event.Key,
-    mapId: event.mapId,
-    markerId: event.markerId,
-    imageId: event.imageId,
+    body: { key: newKey },
+    statusCode: 200,
   };
 };
