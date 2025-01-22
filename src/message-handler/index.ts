@@ -2,9 +2,17 @@ import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
-enum S3Actions {
-  ObjectCreated = "ObjectCreated:Put",
-  ObjectDeleted = "ObjectRemoved:Delete",
+type KnowObjectActions =
+  | "ObjectCreated:Put"
+  | "ObjectCreated:Post"
+  | "ObjectRemoved:Delete";
+
+function isKnowObjectAction(value: string): value is KnowObjectActions {
+  return (
+    value === "ObjectCreated:Put" ||
+    value === "ObjectCreated:Post" ||
+    value === "ObjectRemoved:Delete"
+  );
 }
 
 const queueUrl = process.env.QUEUE_URL;
@@ -49,10 +57,15 @@ export const handler = async (event: any, context: any) => {
   const key = message.s3.object.key;
   const [mapId, markerId, imageId] = message.s3.object.key.split("/");
 
+  if (!isKnowObjectAction(message.eventName)) {
+    throw new Error(`${message.eventName} is not a known event.`);
+  }
+
   if (message.s3.bucket.name === process.env.DUMP_BUCKET_NAME) {
     console.log("in dump bucket land");
     switch (message.eventName) {
-      case S3Actions.ObjectCreated:
+      case "ObjectCreated:Put":
+      case "ObjectCreated:Post":
         console.log("obj created");
         const invokeCommand = new InvokeCommand({
           FunctionName: process.env.PROCESS_IMAGE_FN_NAME,
@@ -63,7 +76,7 @@ export const handler = async (event: any, context: any) => {
         });
         await lambdaClient.send(invokeCommand);
         break;
-      case S3Actions.ObjectDeleted:
+      case "ObjectRemoved:Delete":
         console.log("obj created");
 
         break;
@@ -74,7 +87,8 @@ export const handler = async (event: any, context: any) => {
     console.log("optimized bucker");
     switch (message.eventName) {
       // optimized bucket
-      case S3Actions.ObjectCreated:
+      case "ObjectCreated:Put":
+      case "ObjectCreated:Post":
         console.log("obj created");
         const sendMessageCommand = new SendMessageCommand({
           QueueUrl: queueUrl,
@@ -87,15 +101,9 @@ export const handler = async (event: any, context: any) => {
         });
         await sqsClient.send(sendMessageCommand);
         break;
-      case S3Actions.ObjectDeleted:
+      case "ObjectRemoved:Delete":
         console.log("obj deleted");
 
-        const deleteImageFromDumpBucket = new DeleteObjectCommand({
-          Bucket: process.env.DUMP_BUCKET_NAME,
-          Key: key,
-        });
-
-        s3Client.send(deleteImageFromDumpBucket);
         break;
     }
   }
