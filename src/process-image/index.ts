@@ -24,6 +24,15 @@ const s3Client = new S3Client({
   }),
 });
 
+const streamToString = (stream: any) => {
+  return new Promise((resolve, reject) => {
+    const chunks: any[] = [];
+    stream.on("data", (chunk: any) => chunks.push(chunk));
+    stream.on("error", reject);
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+};
+
 export const handler: Handler = async (
   event: { key: string; mapId: string; markerId: string; imageId: string },
   context: Context
@@ -45,11 +54,11 @@ export const handler: Handler = async (
 
   // SHARP PROCESSING
 
-  // const stream = await streamToString(getObjectResponse.Body?.transformToString('utf-8'));
+  const stream = (await streamToString(getObjectResponse.Body)) as Buffer;
 
   console.log("converted image to stream...");
 
-  let image = sharp(await getObjectResponse.Body?.transformToByteArray(), {
+  let image = sharp(stream, {
     failOn: "none",
   });
   let metadata = await image.metadata();
