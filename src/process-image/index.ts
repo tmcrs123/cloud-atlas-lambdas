@@ -34,12 +34,12 @@ const streamToString = (stream: any) => {
 };
 
 export const handler: Handler = async (
-  event: { key: string; mapId: string; markerId: string; imageId: string },
+  event: { key: string; atlasId: string; markerId: string; imageId: string },
   context: Context
 ) => {
   console.log("Starting image processing with event...", JSON.stringify(event));
 
-  const { key, mapId, markerId, imageId } = event;
+  const { key, atlasId, markerId, imageId } = event;
 
   let getObjectResponse: GetObjectCommandOutput;
 
@@ -130,7 +130,7 @@ export const handler: Handler = async (
     .toBuffer();
 
   // SAVE TO OPTIMIZED BUCKET
-  const newKey = `${mapId}/${markerId}/${randomUUID()}`;
+  const newKey = `${atlasId}/${markerId}/${randomUUID()}`;
   const saveProcessedImageInput = {
     Body: processedImage,
     Bucket: process.env.OPTIMIZED_BUCKET_NAME,

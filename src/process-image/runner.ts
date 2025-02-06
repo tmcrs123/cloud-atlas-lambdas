@@ -1,7 +1,7 @@
 import { handler } from ".";
 
 handler(
-  { Key: "test_image.jpg", mapId: "1", imageId: "1", markerId: "1" },
+  { Key: "test_image.jpg", atlasId: "1", imageId: "1", markerId: "1" },
   {
     callbackWaitsForEmptyEventLoop: false,
     functionName: "",

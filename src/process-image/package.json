@@ -1,10 +1,10 @@
 {
-  "name": "process-image",
+  "name": "cloud-atlas-process-image",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "zip": "tsc && cp dist/index.js . && npx bestzip process-image.zip index.js node_modules && rm -rf index.js",
-    "upload-s3": "aws s3 cp process-image.zip s3://snappin-test-lambdas/",
+    "upload-s3": "aws s3 cp process-image.zip s3://cloud-atlas-test-lambdas/",
     "local": "tsx --env-file=.env runner.ts"
   },
   "keywords": [],
