@@ -1,5 +1,4 @@
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
-import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
 type KnowObjectActions =
@@ -31,14 +30,6 @@ const lambdaClient = new LambdaClient({
   }),
 });
 
-const s3Client = new S3Client({
-  region: process.env.REGION,
-  forcePathStyle: true,
-  ...(process.env.NODE_ENV === "local" && {
-    endpoint: process.env.LOCAL_ENDPOINT,
-  }),
-});
-
 type snsS3Message = {
   awsRegion: string;
   eventName: string;
@@ -50,51 +41,45 @@ type snsS3Message = {
 
 export const handler = async (event: any, context: any) => {
   console.log(event);
-  console.log(context);
   const message: snsS3Message = JSON.parse(event.Records[0].Sns.Message)
     .Records[0];
 
   const key = message.s3.object.key;
-  const [mapId, markerId, imageId] = message.s3.object.key.split("/");
+  const [atlasId, markerId, imageId] = message.s3.object.key.split("/");
 
   if (!isKnowObjectAction(message.eventName)) {
     throw new Error(`${message.eventName} is not a known event.`);
   }
 
   if (message.s3.bucket.name === process.env.DUMP_BUCKET_NAME) {
-    console.log("in dump bucket land");
     switch (message.eventName) {
       case "ObjectCreated:Put":
       case "ObjectCreated:Post":
-        console.log("obj created");
+        console.log("dump", message.eventName);
         const invokeCommand = new InvokeCommand({
           FunctionName: process.env.PROCESS_IMAGE_FN_NAME,
           InvocationType: "Event",
           Payload: Buffer.from(
-            JSON.stringify({ key, mapId, markerId, imageId })
+            JSON.stringify({ key, atlasId: atlasId, markerId, imageId })
           ),
         });
         await lambdaClient.send(invokeCommand);
         break;
       case "ObjectRemoved:Delete":
-        console.log("obj created");
-
         break;
       default:
         break;
     }
   } else {
-    console.log("optimized bucker");
     switch (message.eventName) {
-      // optimized bucket
       case "ObjectCreated:Put":
       case "ObjectCreated:Post":
-        console.log("obj created");
+        console.log("opt", message.eventName);
         const sendMessageCommand = new SendMessageCommand({
           QueueUrl: queueUrl,
           MessageBody: JSON.stringify({
             key,
-            mapId,
+            atlasId: atlasId,
             markerId,
             imageId,
           }),
@@ -102,8 +87,6 @@ export const handler = async (event: any, context: any) => {
         await sqsClient.send(sendMessageCommand);
         break;
       case "ObjectRemoved:Delete":
-        console.log("obj deleted");
-
         break;
     }
   }
@@ -111,7 +94,7 @@ export const handler = async (event: any, context: any) => {
   return {
     statusCode: 200,
     body: JSON.stringify({
-      message: `Successfully handled action ${message.eventName}-${message.s3.bucket.name} for mapId ${mapId}, markerId ${markerId}, imageId: ${imageId}`,
+      message: `Successfully handled action ${message.eventName}-${message.s3.bucket.name} for atlasId ${atlasId}, markerId ${markerId}, imageId: ${imageId}`,
     }),
   };
 };
