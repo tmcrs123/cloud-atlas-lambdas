@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "zip": "tsc && cp dist/index.js . && npx bestzip process-image.zip index.js node_modules && rm -rf index.js",
-    "upload-s3": "aws s3 cp process-image.zip s3://cloud-atlas-test-lambdas/",
+    "upload-s3": "aws s3 cp process-image.zip s3://cloud-atlas-lambdas/",
     "local": "tsx --env-file=.env runner.ts"
   },
   "keywords": [],

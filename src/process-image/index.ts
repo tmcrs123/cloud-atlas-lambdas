@@ -143,12 +143,12 @@ export const handler: Handler = async (
   await s3Client.send(saveProcessedImageCommand);
   console.log("Saved processed image...");
 
-  const deleteImageFromDumpBucket = new DeleteObjectCommand({
-    Bucket: process.env.DUMP_BUCKET_NAME,
+  const deleteImageFromOptimizedBucket = new DeleteObjectCommand({
+    Bucket: process.env.OPTIMIZED_BUCKET_NAME,
     Key: key,
   });
 
-  await s3Client.send(deleteImageFromDumpBucket);
+  await s3Client.send(deleteImageFromOptimizedBucket);
 
   return {
     body: { key: newKey },
