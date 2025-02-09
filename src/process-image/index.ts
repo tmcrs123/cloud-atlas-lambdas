@@ -1,12 +1,10 @@
 import {
-  DeleteObjectCommand,
   GetObjectCommand,
   GetObjectCommandOutput,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Context, Handler } from "aws-lambda";
-import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 
 type ImageType = "panorama" | "landscape" | "portrait" | "square";
@@ -18,7 +16,6 @@ const DESKTOP_MAX_SQUARE = 900;
 
 const s3Client = new S3Client({
   region: process.env.REGION,
-  forcePathStyle: true,
   ...(process.env.NODE_ENV === "local" && {
     endpoint: process.env.LOCAL_ENDPOINT,
   }),
@@ -130,28 +127,30 @@ export const handler: Handler = async (
     .toBuffer();
 
   // SAVE TO OPTIMIZED BUCKET
-  const newKey = `${atlasId}/${markerId}/${randomUUID()}`;
   const saveProcessedImageInput = {
     Body: processedImage,
     Bucket: process.env.OPTIMIZED_BUCKET_NAME,
-    Key: newKey,
+    Key: key,
   };
   const saveProcessedImageCommand = new PutObjectCommand(
     saveProcessedImageInput
   );
 
   await s3Client.send(saveProcessedImageCommand);
-  console.log("Saved processed image...");
 
-  const deleteImageFromOptimizedBucket = new DeleteObjectCommand({
-    Bucket: process.env.OPTIMIZED_BUCKET_NAME,
-    Key: key,
-  });
+  // const DeleteDumpImageInput = {
+  //   Body: processedImage,
+  //   Bucket: process.env.DUMP_BUCKET_NAME,
+  //   Key: newKey,
+  // };
+  // const DeleteDumpImageCommand = new DeleteObjectCommand(
+  //   DeleteDumpImageInput
+  // );
 
-  await s3Client.send(deleteImageFromOptimizedBucket);
+  // await s3Client.send(DeleteDumpImageCommand);
 
   return {
-    body: { key: newKey },
+    body: { key },
     statusCode: 200,
   };
 };

@@ -33,7 +33,6 @@ const lambdaClient = new LambdaClient({
 
 const s3Client = new S3Client({
   region: process.env.REGION,
-  forcePathStyle: true,
   ...(process.env.NODE_ENV === "local" && {
     endpoint: process.env.LOCAL_ENDPOINT,
   }),
@@ -91,14 +90,20 @@ export const handler = async (event: any, context: any) => {
           }),
         });
         await sqsClient.send(sendMessageCommand);
-        break;
-      case "ObjectRemoved:Delete":
+
         const deleteImageFromDumpBucket = new DeleteObjectCommand({
+          Bucket: process.env.DUMP_BUCKET_NAME,
+          Key: key,
+        });
+        await s3Client.send(deleteImageFromDumpBucket);
+        break;
+
+      case "ObjectRemoved:Delete": //this is NOT the S3 event notification, this is the message sent from the backend
+        const deleteImageFromOptimizedBucket = new DeleteObjectCommand({
           Bucket: process.env.OPTIMIZED_BUCKET_NAME,
           Key: key,
         });
-
-        await s3Client.send(deleteImageFromDumpBucket);
+        await s3Client.send(deleteImageFromOptimizedBucket);
         break;
     }
   }
