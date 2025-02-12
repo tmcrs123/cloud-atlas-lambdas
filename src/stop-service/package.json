@@ -1,10 +1,11 @@
 {
-  "name": "stop-service",
+  "name": "cloud-atlas-stop-service",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "zip": "tsc && cp dist/index.js . && npx bestzip stop-service.zip index.js node_modules && rm -rf index.js",
-    "upload-s3": "aws s3 cp stop-service.zip s3://cloud-atlas-lambdas/"
+    "upload-s3": "aws s3 cp stop-service.zip s3://cloud-atlas-lambdas/",
+    "send-to-aws": "npm run zip && npm run upload-s3"
   },
   "keywords": [],
   "author": "",

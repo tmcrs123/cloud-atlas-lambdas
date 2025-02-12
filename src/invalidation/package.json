@@ -1,11 +1,11 @@
 {
-  "name": "cloud-atlas-message-handler",
+  "name": "cloud-atlas-create-invalidation",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "zip": "tsc && cp dist/index.js . && npx bestzip message-handler.zip index.js node_modules && rm -rf index.js",
-    "upload-s3": "aws s3 cp message-handler.zip s3://cloud-atlas-lambdas/",
+    "zip": "tsc && cp dist/index.js . && npx bestzip create-invalidation.zip index.js node_modules && rm -rf index.js",
+    "upload-s3": "aws s3 cp create-invalidation.zip s3://cloud-atlas-lambdas/",
     "send-to-aws": "npm run zip && npm run upload-s3"
   },
   "keywords": [],
@@ -13,16 +13,14 @@
   "license": "ISC",
   "type": "commonjs",
   "description": "",
-  "dependencies": {
-    "@aws-sdk/client-lambda": "^3.730.0",
-    "@aws-sdk/client-s3": "3.705.0",
-    "@aws-sdk/client-sqs": "^3.730.0"
-  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.147",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.1",
     "tslib": "^2.8.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudfront": "^3.745.0"
   }
 }
