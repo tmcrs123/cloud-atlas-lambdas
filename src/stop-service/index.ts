@@ -12,13 +12,13 @@ export const handler = async (event: { key: boolean }) => {
       command = new UpdateServiceCommand({
         service: process.env.SERVICE_NAME,
         cluster: process.env.CLUSTER_NAME,
-        desiredCount: 0,
+        desiredCount: 1,
       });
     } else {
       command = new UpdateServiceCommand({
         service: process.env.SERVICE_NAME,
         cluster: process.env.CLUSTER_NAME,
-        desiredCount: 1,
+        desiredCount: 0,
       });
     }
 
