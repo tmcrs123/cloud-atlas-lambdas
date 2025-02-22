@@ -96,8 +96,6 @@ export const handler: Handler = async (
 
   let resizeTo: { width?: number; height?: number } = {};
 
-  console.log(imageType);
-
   switch (imageType) {
     case "landscape":
       if (imgWidth > DESKTOP_MAX_WIDTH) resizeTo = { width: DESKTOP_MAX_WIDTH };
@@ -137,17 +135,6 @@ export const handler: Handler = async (
   );
 
   await s3Client.send(saveProcessedImageCommand);
-
-  // const DeleteDumpImageInput = {
-  //   Body: processedImage,
-  //   Bucket: process.env.DUMP_BUCKET_NAME,
-  //   Key: newKey,
-  // };
-  // const DeleteDumpImageCommand = new DeleteObjectCommand(
-  //   DeleteDumpImageInput
-  // );
-
-  // await s3Client.send(DeleteDumpImageCommand);
 
   return {
     body: { key },
